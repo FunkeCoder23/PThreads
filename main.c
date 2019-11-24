@@ -14,6 +14,7 @@
 
 #define true 1
 #define false 0
+#define debug true
 
 //semaphores for agents
 sem_t agentSem, tobacco, paper, match;
@@ -30,6 +31,7 @@ void* agentTP(void* arg)
 	{
 		sleep(.001*(rand()%200)); //wait from 0-200 ms
 		sem_wait(&agentSem);// P(agentSem)
+		if(debug) printf("Providing T & P\r\n");
 		sem_post(&tobacco);// V(tobacco)
 		sem_post(&paper);// V(paper)
 	}
@@ -45,6 +47,7 @@ void* agentPM(void* arg)
 	{
 		sleep(.001*(rand()%200)); //wait from 0-200 ms
 		sem_wait(&agentSem);// P(agentSem)
+		if(debug) printf("Providing P & M\r\n");
 		sem_post(&paper);// V(paper)
 		sem_post(&match);// V(match)
 	}
@@ -59,6 +62,7 @@ void* agentMT(void* arg)
 	{
 		sleep(.001*(rand()%200)); //wait from 0-200 ms
 		sem_wait(&agentSem);// P(agentSem)
+		if(debug) printf("Providing M & T\r\n");
 		sem_post(&match);// V(match)
 		sem_post(&tobacco);// V(tobacco)
 	}
@@ -77,11 +81,13 @@ void* pusherT(void* arg)
 		if (isPaper) 
 		{
 			isPaper = false;
+			if (debug) printf("Alerting smoker with match\r\n");
 			sem_post(&matchSem);//V(matchSem)
 		}
 		else if (isMatch) 
 		{
 			isMatch = false;
+			if (debug) printf("Alerting smoker with paper\r\n");	
 			sem_post(&paperSem);//V(paperSem)
 		}
 		else isTobacco = true;
@@ -102,11 +108,13 @@ void* pusherP(void* arg)
 		if (isTobacco) 
 		{
 			isTobacco = false;
+			if (debug) printf("Alerting smoker with match\r\n");			
 			sem_post(&matchSem);//V(matchSem)
 		}
 		else if (isMatch) 
 		{
 			isMatch = false;
+			if (debug) printf("Alerting smoker with Tobacco\r\n");			
 			sem_post(&tobaccoSem);//V(tobaccoSem)
 		}
 		else isPaper = true;
@@ -127,11 +135,13 @@ void* pusherM(void* arg)
 		if (isPaper) 
 		{
 			isPaper = false;
+			if (debug) printf("Alerting smoker with Tobacco\r\n");	
 			sem_post(&tobaccoSem);//V(tobaccoSem)
 		}
 		else if (isTobacco) 
 		{
 			isTobacco = false;
+			if (debug) printf("Alerting smoker with paper\r\n");	
 			sem_post(&paperSem);//V(paperSem)
 		}
 		else isMatch = true;
@@ -148,10 +158,11 @@ void* smokerT(void* arg)
 		sleep(.001*(rand()%50)); //wait from 0-50 ms
 		sem_wait(&tobaccoSem);// P(tobaccoSem)
 		// Make a "cigarette"
-
+		if (debug) printf("making cigarette with Tobacco\r\n");
 		sleep(.001*(rand()%50)); //wait from 0-50 ms
 		sem_post(&agentSem);// V(agentSem)
 		// Smoke the "cigarette"
+		if (debug) printf("smoking cigarette with tobacco\r\n");
 	}
 	return 0;	
 }
@@ -164,10 +175,11 @@ void* smokerP(void* arg)
 		sleep(.001*(rand()%50)); //wait from 0-50 ms
 		sem_wait(&paperSem);// P(paperSem)
 		// Make a "cigarette"
-
+		if (debug) printf("making cigarette with paper\r\n");
 		sleep(.001*(rand()%50)); //wait from 0-50 ms
 		sem_post(&agentSem);// V(agentSem)
 		// Smoke the "cigarette"
+		if (debug) printf("smoking cigarette with paper\r\n");
 	}
 	return 0;	
 }
@@ -180,10 +192,11 @@ void* smokerM(void* arg)
 		sleep(.001*(rand()%50)); //wait from 0-50 ms
 		sem_wait(&matchSem);// P(matchSem)
 		// Make a "cigarette"
-
+		if (debug) printf("making cigarette with match\r\n");		
 		sleep(.001*(rand()%50)); //wait from 0-50 ms
 		sem_post(&agentSem);// V(agentSem)
 		// Smoke the "cigarette"
+		if (debug) printf("smoking cigarette with match\r\n");
 	}
 	return 0;
 }
@@ -197,11 +210,12 @@ int main()
 	//create 3 agents, 3 pushers, six smokers (2 holding tobacco, 2 paper, 2 matches)
 	//JOIN ALL THREADS BEFORE PROG TERMINATES
 
+	//init bools
 	isTobacco = false;
 	isPaper = false;
 	isMatch = false;
-
-	sem_init(&paperSem, 0, 0); //tobaccoSem = 0
+  //init semaphores
+	sem_init(&tobaccoSem, 0, 0); //tobaccoSem = 0
 	sem_init(&paperSem, 0, 0); //paperSem = 0
 	sem_init(&matchSem, 0, 0); //matchSem = 0
 	sem_init(&mutex, 0, 1); //mutex = 1
@@ -233,7 +247,17 @@ int main()
 	pthread_join(agents[i],NULL);  //agents 0-2
 	pthread_join(pushers[i],NULL); //pusher 0-2 
 	}
-	sem_destroy(&mutex); 
+
+	//dealloc semaphores
+	sem_destroy(&mutex);
+	sem_destroy(&agentSem); 
+	sem_destroy(&matchSem); 
+	sem_destroy(&paperSem); 
+	sem_destroy(&tobaccoSem); 
+	sem_destroy(&match);
+	sem_destroy(&paper); 
+	sem_destroy(&tobacco);  
+
 	return 0; 
 } 
 
